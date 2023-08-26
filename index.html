@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice Volume Game</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+  }
+  #game-container {
+    text-align: center;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  h1 {
+    margin-top: 0;
+  }
+  button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #007bff;
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  h2 {
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+<div id="game-container">
+  <h1>Voice Volume Game</h1>
+  <button id="start-button">Start</button>
+  <h2>Score: <span id="score">0</span></h2>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const startButton = document.getElementById("start-button");
+      const scoreDisplay = document.getElementById("score");
+      
+      let isGameStarted = false;
+      let score = 0;
+      const detectionDuration = 3000; // 3秒間
+      
+      // Web Audio APIの初期化
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      
+      navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+          const source = audioContext.createMediaStreamSource(stream);
+          source.connect(analyser);
+        })
+        .catch(error => {
+          console.error("Error accessing microphone:", error);
+        });
+      
+  // 音声の検出と得点の更新
+  const detectVoice = () => {
+    if (isGameStarted) {
+      analyser.getByteFrequencyData(dataArray);
+      const voiceLevel = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength;
+      score += Math.floor(voiceLevel);
+      scoreDisplay.textContent = score;
+      requestAnimationFrame(detectVoice);
+    }
+  };
+  
+  // ゲームの開始と終了
+  startButton.addEventListener("click", () => {
+    if (!isGameStarted) {
+      isGameStarted = true;
+      startButton.textContent = "Listening...";
+      setTimeout(() => {
+        isGameStarted = false;
+        startButton.textContent = "Start";
+      }, detectionDuration);
+      detectVoice();
+    }
+  });
+});
+</script>
+</body>
+</html>
